@@ -1,0 +1,29 @@
+version: '3'
+services:
+  api:
+    build: .
+    ports:
+      - 5000:5000
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/Blog
+    restart: always
+    container_name: api
+    depends_on:
+      - database
+  database:
+    image: postgres:alpine
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=Blog
+    restart: always
+    volumes:
+    - database_data:/var/lib/postgresql/data
+    container_name: db
+
+volumes:
+  database_data:
