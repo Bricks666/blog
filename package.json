@@ -12,7 +12,7 @@
 		"lint": "eslint --ext .ts src/",
 		"lint:fix": "eslint --ext .ts src/ --fix",
 		"format": "prettier --write --config ./.prettierrc src",
-    "prepare": "husky install"
+		"prepare": "husky install"
 	},
 	"repository": {
 		"type": "git",
@@ -26,10 +26,13 @@
 	},
 	"homepage": "https://github.com/Bricks666/blog#readme",
 	"dependencies": {
+		"@bricks-ether/server-utils": "^1.0.0",
 		"@prisma/client": "^4.14.0",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
+		"dotenv": "^16.0.3",
 		"express": "^4.18.2",
+		"express-validator": "^7.0.1",
 		"jsonwebtoken": "^9.0.0"
 	},
 	"devDependencies": {

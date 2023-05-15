@@ -1,6 +1,13 @@
-import express, { json } from 'express';
+import { createErrorHandler } from '@bricks-ether/server-utils';
+import express, { Router, json } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { config } from 'dotenv';
+import { databaseService } from './database';
+import { authRouter } from './auth';
+import { PORT } from './shared/config';
+
+config();
 
 const app = express();
 
@@ -10,7 +17,13 @@ app.get('/ping', (_, res) => {
 	res.send('pong');
 });
 
-const PORT = process.env.PORT ?? 5000;
-app.listen(PORT, () => {
+const mainRouter = Router();
+
+mainRouter.use('/auth', authRouter);
+
+app.use(createErrorHandler());
+
+app.listen(PORT, async () => {
+	await databaseService.$connect();
 	console.log(`Server start on ${PORT} port`);
 });
