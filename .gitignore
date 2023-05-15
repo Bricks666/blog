@@ -1,3 +1,4 @@
 .env*
 geth
 *.db
+node_modules

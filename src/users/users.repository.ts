@@ -4,10 +4,10 @@ import { CreateUserDto, UserDto } from './users.dto';
 export class UsersRepository {
 	constructor(private readonly databaseService: DatabaseService) {}
 
-	async getOne(id: number): Promise<UserDto | null> {
-		return this.databaseService.user.findUnique({
+	async getByLogin(login: string): Promise<UserDto | null> {
+		return this.databaseService.user.findFirst({
 			where: {
-				id,
+				login,
 			},
 		});
 	}
