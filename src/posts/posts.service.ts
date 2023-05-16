@@ -1,7 +1,7 @@
 import { BadRequestError, NotFoundError } from '@bricks-ether/server-utils';
+import { withoutStaticRoot } from '../shared/lib';
 import { type PostsRepository, postsRepository } from './posts.repository';
 import { flatPost } from './lib';
-import { divisionFileRoot } from './config';
 import type { PaginationQueryDto } from '../shared/types';
 import type {
 	AddFilesDto,
@@ -34,7 +34,7 @@ export class PostsService {
 
 	async create(dto: CreatePostDto): Promise<PostDto> {
 		const { authorId, files, content, } = dto;
-		const filePaths = files.map((file) => divisionFileRoot(file.path));
+		const filePaths = files.map((file) => withoutStaticRoot(file.path));
 
 		const post = await this.postsRepository.create({
 			authorId,
@@ -61,7 +61,7 @@ export class PostsService {
 
 	async addFiles(dto: AddFilesDto): Promise<PostDto> {
 		const { files, id, } = dto;
-		const filePaths = files.map((file) => divisionFileRoot(file.path));
+		const filePaths = files.map((file) => withoutStaticRoot(file.path));
 
 		const post = await this.postsRepository.addFiles({
 			id,

@@ -1,13 +1,11 @@
-import { extname, join, resolve } from 'node:path';
+import { extname, join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import multer, { diskStorage } from 'multer';
-import { __dirname } from '../../shared/config';
-
-const ROOT = resolve(__dirname, 'public');
+import { STATIC_SERVE_ROOT } from '../../shared/config';
 
 const storage = diskStorage({
 	destination: async (_, _file, callback) => {
-		const destination = join(ROOT, 'posts');
+		const destination = join(STATIC_SERVE_ROOT, 'posts');
 
 		await mkdir(destination, { recursive: true, });
 		callback(null, destination);
@@ -24,7 +22,3 @@ const storage = diskStorage({
 export const postsFileLoader = multer({
 	storage,
 });
-
-export const divisionFileRoot = (path: string): string => {
-	return path.replace(ROOT, '');
-};

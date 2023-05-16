@@ -1,11 +1,11 @@
 import { createErrorHandler } from '@bricks-ether/server-utils';
-import express, { Router, json } from 'express';
+import express, { Router, json, static as serveStatic } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { databaseService } from './database';
 import { authRouter } from './auth';
-import { PORT } from './shared/config';
+import { PORT, STATIC_SERVE_ROOT } from './shared/config';
 import { postsRouter } from './posts';
 
 config();
@@ -24,6 +24,7 @@ mainRouter.use('/auth', authRouter);
 mainRouter.use('/posts', postsRouter);
 
 app.use('/api', mainRouter);
+app.use('/', serveStatic(STATIC_SERVE_ROOT));
 
 app.use(createErrorHandler());
 

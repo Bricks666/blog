@@ -11,8 +11,12 @@ export const postsRouter = Router();
 
 postsRouter.get(
 	'/',
-	query('count').optional().toInt().isInt(),
-	query('page').optional().toInt().isInt(),
+	query('count').optional().toInt().isInt({
+		gt: 0,
+	}),
+	query('page').optional().toInt().isInt({
+		gt: 0,
+	}),
 	checkValidateErrors(),
 	postsController.getAll.bind(postsController)
 );
