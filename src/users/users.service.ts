@@ -21,7 +21,7 @@ export class UsersService {
 		return UsersService.satisfyUser(user);
 	}
 
-	static satisfyUser(user: UserDto): SecurityUserDto {
+	static satisfyUser(user: Pick<UserDto, 'login' | 'id'>): SecurityUserDto {
 		return {
 			id: user.id,
 			login: user.login,

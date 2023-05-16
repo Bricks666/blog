@@ -5,6 +5,7 @@ import { authController } from './auth.controller';
 
 export const authRouter = Router();
 
+authRouter.get('/', authController.auth);
 authRouter.put(
 	'/registration',
 	body('login').isString(),
@@ -19,3 +20,5 @@ authRouter.post(
 	checkValidateErrors(),
 	authController.login
 );
+authRouter.delete('/logout', authController.logout);
+authRouter.get('/refresh', authController.refresh);
