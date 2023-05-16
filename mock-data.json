@@ -1,0 +1,19 @@
+{
+	"users": [
+		{
+			"login": "user 1",
+			"password": "password 1"
+		},
+		{
+			"login": "user 2",
+			"password": "password 2"
+		},
+		{
+			"login": "user 3",
+			"password": "password 3"
+		}
+	],
+  "posts": {
+
+  }
+}

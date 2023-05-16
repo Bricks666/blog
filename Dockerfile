@@ -8,7 +8,7 @@ RUN npm ci --ignore-scripts
 
 COPY ./rollup.config.js .
 
-COPY prisma .
+COPY prisma ./prisma
 RUN npx prisma generate
 
 COPY src src
@@ -22,9 +22,10 @@ COPY package*.json .
 RUN npm ci --ignore-scripts --omit=dev
 
 RUN npm i --no-save prisma
-COPY prisma .
+COPY prisma prisma
+RUN npx prisma generate
 
-COPY --from=build /app/dist/* .
+COPY --from=build /app/dist ./
 
 ENV PORT=5000
 

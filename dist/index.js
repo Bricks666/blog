@@ -299,7 +299,7 @@ const FULL_POST_INCLUDE = {
 const storage = diskStorage({
     destination: async (_, _file, callback) => {
         const destination = join(STATIC_SERVE_ROOT, 'posts');
-        await mkdir(destination, { recursive: true });
+        await mkdir(destination, { recursive: true, });
         callback(null, destination);
     },
     filename: (_, file, callback) => {
@@ -436,7 +436,7 @@ class PostsService {
         this.postsRepository = postsRepository;
     }
     async getAll(pagination) {
-        const { count = 20, page = 1 } = pagination;
+        const { count = 20, page = 1, } = pagination;
         const posts = await this.postsRepository.getAll(page, count);
         return posts.map(flatPost);
     }
@@ -450,7 +450,7 @@ class PostsService {
         return flatPost(post);
     }
     async create(dto) {
-        const { authorId, files, content } = dto;
+        const { authorId, files, content, } = dto;
         const filePaths = files.map((file) => withoutStaticRoot(file.path));
         const post = await this.postsRepository.create({
             authorId,
@@ -470,7 +470,7 @@ class PostsService {
         return flatPost(post);
     }
     async addFiles(dto) {
-        const { files, id } = dto;
+        const { files, id, } = dto;
         const filePaths = files.map((file) => withoutStaticRoot(file.path));
         const post = await this.postsRepository.addFiles({
             id,
@@ -615,7 +615,7 @@ postsRouter.post('/create', createRequiredAuth(), postsFileLoader.array('files')
 postsRouter.patch('/:id/update', createSinglePostChain(), createRequiredAuth(), body('content').optional().isString().trim(), createIsPostAuthorChecker(), postsController.update.bind(postsController));
 postsRouter.patch('/:id/add-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsFileLoader.array('files'), createFilesChain(), checkValidateErrors(), postsController.addFiles.bind(postsController) // Broken type because calling createFieldsChain
 );
-postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), body('filePaths').isArray({ min: 1 }), checkValidateErrors(), postsController.removeFiles.bind(postsController));
+postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), body('filePaths').isArray({ min: 1, }), checkValidateErrors(), postsController.removeFiles.bind(postsController));
 postsRouter.delete('/:id/remove', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.remove.bind(postsController));
 
 config();

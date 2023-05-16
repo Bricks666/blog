@@ -5,6 +5,7 @@
 	"main": "./dist/index.js",
 	"type": "module",
 	"scripts": {
+		"start:dev": "npx prisma migrate deploy && node ./dist/index.js",
 		"start:prod": "npx prisma migrate deploy && node ./index.js",
 		"dev": "nodemon ./dist/index.js",
 		"build": "rollup -c ./rollup.config.js",
