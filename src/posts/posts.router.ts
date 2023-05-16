@@ -1,12 +1,9 @@
-import {
-	checkValidateErrors,
-	filesValidators
-} from '@bricks-ether/server-utils';
+import { checkValidateErrors } from '@bricks-ether/server-utils';
 import { Router } from 'express';
 import { body, oneOf, query } from 'express-validator';
 import { createRequiredAuth } from '../auth';
 import { postsController } from './posts.controller';
-import { createSinglePostChain } from './lib';
+import { createFilesChain, createSinglePostChain } from './lib';
 import { createIsPostAuthorChecker } from './middlewares';
 import { postsFileLoader } from './config';
 
@@ -29,19 +26,15 @@ postsRouter.post(
 	'/create',
 	createRequiredAuth(),
 	postsFileLoader.array('files'),
-	oneOf([
-		body('content').isString().trim().notEmpty(),
-		body('files')
-			.custom(filesValidators.existsArray)
-			.custom(filesValidators.arrayNotEmpty)
-	]),
+	oneOf([body('content').isString().trim().notEmpty(), createFilesChain()]),
 	checkValidateErrors(),
 	postsController.create.bind(postsController)
 );
-postsRouter.put(
+postsRouter.patch(
 	'/:id/update',
 	createSinglePostChain(),
 	createRequiredAuth(),
+	body('content').optional().isString().trim(),
 	createIsPostAuthorChecker(),
 	postsController.update.bind(postsController)
 );
@@ -51,13 +44,17 @@ postsRouter.patch(
 	createRequiredAuth(),
 	createIsPostAuthorChecker(),
 	postsFileLoader.array('files'),
-	postsController.addFiles.bind(postsController)
+	createFilesChain(),
+	checkValidateErrors(),
+	postsController.addFiles.bind(postsController) as any // Broken type because calling createFieldsChain
 );
 postsRouter.patch(
 	'/:id/remove-files',
 	createSinglePostChain(),
 	createRequiredAuth(),
 	createIsPostAuthorChecker(),
+	body('filePaths').isArray({ min: 1, }),
+	checkValidateErrors(),
 	postsController.removeFiles.bind(postsController)
 );
 postsRouter.delete(

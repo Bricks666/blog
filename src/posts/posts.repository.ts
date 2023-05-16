@@ -1,6 +1,11 @@
 import { type DatabaseService, databaseService } from '../database';
 import { FULL_POST_INCLUDE } from './config';
-import type { CreatePostRepositoryDto } from './posts.dto';
+import type {
+	AddFilesRepositoryDto,
+	CreatePostRepositoryDto,
+	RemoveFilesDto,
+	UpdatePostDto
+} from './posts.dto';
 import type { FullPost } from './types';
 
 export class PostsRepository {
@@ -42,16 +47,57 @@ export class PostsRepository {
 		});
 	}
 
-	async update() {
-		return null;
+	async update(dto: UpdatePostDto) {
+		const { content, id, } = dto;
+		return this.databaseService.post.update({
+			where: {
+				id,
+			},
+			data: {
+				content,
+			},
+			include: FULL_POST_INCLUDE,
+		});
 	}
 
-	async addFiles() {
-		return null;
+	async addFiles(dto: AddFilesRepositoryDto) {
+		const { id, files, } = dto;
+		const filePaths = files.map((file) => ({ filePath: file, }));
+
+		return this.databaseService.post.update({
+			where: {
+				id,
+			},
+			data: {
+				files: {
+					createMany: {
+						data: filePaths,
+						skipDuplicates: true,
+					},
+				},
+			},
+			include: FULL_POST_INCLUDE,
+		});
 	}
 
-	async removeFiles() {
-		return null;
+	async removeFiles(dto: RemoveFilesDto) {
+		const { filePaths, id, } = dto;
+
+		return this.databaseService.post.update({
+			where: {
+				id,
+			},
+			data: {
+				files: {
+					deleteMany: {
+						filePath: {
+							in: filePaths,
+						},
+					},
+				},
+			},
+			include: FULL_POST_INCLUDE,
+		});
 	}
 
 	async remove(id: number): Promise<void> {

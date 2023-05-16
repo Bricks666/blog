@@ -32,8 +32,9 @@ app.listen(PORT, async () => {
 	console.log(`Server start on ${PORT} port`);
 });
 
-const onExit = () => {
+const onExit = (_, code: number) => {
 	databaseService.$disconnect();
+	process.exit(code);
 };
 
 process.on('SIGTERM', onExit);

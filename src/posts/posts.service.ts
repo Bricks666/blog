@@ -1,9 +1,15 @@
-import { NotFoundError } from '@bricks-ether/server-utils';
+import { BadRequestError, NotFoundError } from '@bricks-ether/server-utils';
 import { type PostsRepository, postsRepository } from './posts.repository';
 import { flatPost } from './lib';
 import { divisionFileRoot } from './config';
 import type { PaginationQueryDto } from '../shared/types';
-import type { CreatePostDto, PostDto } from './posts.dto';
+import type {
+	AddFilesDto,
+	CreatePostDto,
+	PostDto,
+	RemoveFilesDto,
+	UpdatePostDto
+} from './posts.dto';
 
 export class PostsService {
 	constructor(private readonly postsRepository: PostsRepository) {}
@@ -39,16 +45,36 @@ export class PostsService {
 		return flatPost(post);
 	}
 
-	async update() {
-		return null;
+	async update(dto: UpdatePostDto): Promise<PostDto> {
+		const createdPost = await this.getOne(dto.id);
+
+		if (!createdPost.files.length && !dto.content) {
+			throw new BadRequestError({
+				message: "Content can't be empty if there are not any files",
+			});
+		}
+
+		const post = await this.postsRepository.update(dto);
+
+		return flatPost(post);
 	}
 
-	async addFiles() {
-		return null;
+	async addFiles(dto: AddFilesDto): Promise<PostDto> {
+		const { files, id, } = dto;
+		const filePaths = files.map((file) => divisionFileRoot(file.path));
+
+		const post = await this.postsRepository.addFiles({
+			id,
+			files: filePaths,
+		});
+
+		return flatPost(post);
 	}
 
-	async removeFiles() {
-		return null;
+	async removeFiles(dto: RemoveFilesDto): Promise<PostDto> {
+		const post = await this.postsRepository.removeFiles(dto);
+
+		return flatPost(post);
 	}
 
 	async remove(id: number): Promise<void> {

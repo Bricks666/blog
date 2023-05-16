@@ -1,4 +1,4 @@
-import { NotFoundError, ForbiddenError, UnauthorizedError, checkValidateErrors, BadRequestError, filesValidators, createErrorHandler } from '@bricks-ether/server-utils';
+import { NotFoundError, ForbiddenError, UnauthorizedError, checkValidateErrors, filesValidators, BadRequestError, createErrorHandler } from '@bricks-ether/server-utils';
 import express, { Router, json } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -295,7 +295,7 @@ const ROOT = resolve(__dirname, 'public');
 const storage = diskStorage({
     destination: async (_, _file, callback) => {
         const destination = join(ROOT, 'posts');
-        await mkdir(destination, { recursive: true });
+        await mkdir(destination, { recursive: true, });
         callback(null, destination);
     },
     filename: (_, file, callback) => {
@@ -351,14 +351,53 @@ class PostsRepository {
             include: FULL_POST_INCLUDE,
         });
     }
-    async update() {
-        return null;
+    async update(dto) {
+        const { content, id } = dto;
+        return this.databaseService.post.update({
+            where: {
+                id,
+            },
+            data: {
+                content,
+            },
+            include: FULL_POST_INCLUDE,
+        });
     }
-    async addFiles() {
-        return null;
+    async addFiles(dto) {
+        const { id, files } = dto;
+        const filePaths = files.map((file) => ({ filePath: file }));
+        return this.databaseService.post.update({
+            where: {
+                id,
+            },
+            data: {
+                files: {
+                    createMany: {
+                        data: filePaths,
+                        skipDuplicates: true,
+                    },
+                },
+            },
+            include: FULL_POST_INCLUDE,
+        });
     }
-    async removeFiles() {
-        return null;
+    async removeFiles(dto) {
+        const { filePaths, id } = dto;
+        return this.databaseService.post.update({
+            where: {
+                id,
+            },
+            data: {
+                files: {
+                    deleteMany: {
+                        filePath: {
+                            in: filePaths,
+                        },
+                    },
+                },
+            },
+            include: FULL_POST_INCLUDE,
+        });
     }
     async remove(id) {
         await this.databaseService.post.delete({
@@ -383,6 +422,11 @@ const flatPost = (post) => {
 
 const createSinglePostChain = () => {
     return param('id').toInt().isInt();
+};
+const createFilesChain = () => {
+    return body('files')
+        .custom(filesValidators.existsArray)
+        .custom(filesValidators.arrayNotEmpty);
 };
 
 class PostsService {
@@ -414,14 +458,28 @@ class PostsService {
         });
         return flatPost(post);
     }
-    async update() {
-        return null;
+    async update(dto) {
+        const createdPost = await this.getOne(dto.id);
+        if (!createdPost.files.length && !dto.content) {
+            throw new BadRequestError({
+                message: "Content can't be empty if there are not any files",
+            });
+        }
+        const post = await this.postsRepository.update(dto);
+        return flatPost(post);
     }
-    async addFiles() {
-        return null;
+    async addFiles(dto) {
+        const { files, id } = dto;
+        const filePaths = files.map((file) => divisionFileRoot(file.path));
+        const post = await this.postsRepository.addFiles({
+            id,
+            files: filePaths,
+        });
+        return flatPost(post);
     }
-    async removeFiles() {
-        return null;
+    async removeFiles(dto) {
+        const post = await this.postsRepository.removeFiles(dto);
+        return flatPost(post);
     }
     async remove(id) {
         await this.postsRepository.remove(id);
@@ -464,20 +522,47 @@ class PostsController {
                 files,
                 content,
             });
+            res.status(201).json(post);
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    async update(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { content = null } = req.body;
+            const post = await this.postsService.update({
+                id,
+                content,
+            });
             res.json(post);
         }
         catch (error) {
             next(error);
         }
     }
-    async update() {
-        return null;
+    async addFiles(req, res, next) {
+        try {
+            const { id } = req.params;
+            const files = req.files;
+            const post = await this.postsService.addFiles({ files, id });
+            res.json(post);
+        }
+        catch (error) {
+            next(error);
+        }
     }
-    async addFiles() {
-        return null;
-    }
-    async removeFiles() {
-        return null;
+    async removeFiles(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { filePaths } = req.body;
+            const post = await this.postsService.removeFiles({ id, filePaths });
+            res.json(post);
+        }
+        catch (error) {
+            next(error);
+        }
     }
     async remove(req, res, next) {
         try {
@@ -503,7 +588,7 @@ const createIsPostAuthorChecker = (paramName = 'id') => {
                     message: `There is not post id called ${paramName}`,
                 });
             }
-            const { user } = req;
+            const { user, } = req;
             const post = await postsService.getOne(id);
             if (post.authorId !== user.id) {
                 throw new ForbiddenError({
@@ -521,15 +606,11 @@ const createIsPostAuthorChecker = (paramName = 'id') => {
 const postsRouter = Router();
 postsRouter.get('/', query('count').optional().toInt().isInt(), query('page').optional().toInt().isInt(), checkValidateErrors(), postsController.getAll.bind(postsController));
 postsRouter.get('/:id', createSinglePostChain(), checkValidateErrors(), postsController.getOne.bind(postsController));
-postsRouter.post('/create', createRequiredAuth(), postsFileLoader.array('files'), oneOf([
-    body('content').isString().trim().notEmpty(),
-    body('files')
-        .custom(filesValidators.existsArray)
-        .custom(filesValidators.arrayNotEmpty),
-]), checkValidateErrors(), postsController.create.bind(postsController));
-postsRouter.put('/:id/update', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.update.bind(postsController));
-postsRouter.patch('/:id/add-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsFileLoader.array('files'), postsController.addFiles.bind(postsController));
-postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.removeFiles.bind(postsController));
+postsRouter.post('/create', createRequiredAuth(), postsFileLoader.array('files'), oneOf([body('content').isString().trim().notEmpty(), createFilesChain()]), checkValidateErrors(), postsController.create.bind(postsController));
+postsRouter.patch('/:id/update', createSinglePostChain(), createRequiredAuth(), body('content').optional().isString().trim(), createIsPostAuthorChecker(), postsController.update.bind(postsController));
+postsRouter.patch('/:id/add-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsFileLoader.array('files'), createFilesChain(), checkValidateErrors(), postsController.addFiles.bind(postsController) // Broken type because calling createFieldsChain
+);
+postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), body('filePaths').isArray({ min: 1 }), checkValidateErrors(), postsController.removeFiles.bind(postsController));
 postsRouter.delete('/:id/remove', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.remove.bind(postsController));
 
 config();
@@ -547,8 +628,9 @@ app.listen(PORT, async () => {
     await databaseService.$connect();
     console.log(`Server start on ${PORT} port`);
 });
-const onExit = () => {
+const onExit = (_, code) => {
     databaseService.$disconnect();
+    process.exit(code);
 };
 process.on('SIGTERM', onExit);
 process.on('SIGINT', onExit);

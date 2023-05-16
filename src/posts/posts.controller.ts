@@ -5,7 +5,9 @@ import type { NextFunction, Request, Response } from 'express';
 import type {
 	CreatePostBodyDto,
 	PostDto,
-	SinglePostParamsDto
+	RemoveFilesBodyDto,
+	SinglePostParamsDto,
+	UpdatePostBodyDto
 } from './posts.dto';
 
 export class PostsController {
@@ -58,22 +60,62 @@ export class PostsController {
 				files,
 				content,
 			});
+			res.status(201).json(post);
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	async update(
+		req: Request<SinglePostParamsDto, PostDto, UpdatePostBodyDto>,
+		res: Response<PostDto>,
+		next: NextFunction
+	) {
+		try {
+			const { id, } = req.params;
+			const { content = null, } = req.body;
+
+			const post = await this.postsService.update({
+				id,
+				content,
+			});
+
 			res.json(post);
 		} catch (error) {
 			next(error);
 		}
 	}
 
-	async update() {
-		return null;
+	async addFiles(
+		req: Request<SinglePostParamsDto, PostDto>,
+		res: Response<PostDto>,
+		next: NextFunction
+	) {
+		try {
+			const { id, } = req.params;
+			const files = req.files as Array<globalThis.Express.Multer.File>;
+
+			const post = await this.postsService.addFiles({ files, id, });
+			res.json(post);
+		} catch (error) {
+			next(error);
+		}
 	}
 
-	async addFiles() {
-		return null;
-	}
+	async removeFiles(
+		req: Request<SinglePostParamsDto, PostDto, RemoveFilesBodyDto>,
+		res: Response<PostDto>,
+		next: NextFunction
+	) {
+		try {
+			const { id, } = req.params;
+			const { filePaths, } = req.body;
 
-	async removeFiles() {
-		return null;
+			const post = await this.postsService.removeFiles({ id, filePaths, });
+			res.json(post);
+		} catch (error) {
+			next(error);
+		}
 	}
 
 	async remove(
