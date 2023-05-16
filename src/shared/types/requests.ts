@@ -21,3 +21,8 @@ export interface AuthUserRequest<
 > extends Request<P, ResBody, ReqBody, ReqQuery, Locals> {
 	user: User;
 }
+
+export interface PaginationQueryDto {
+	readonly count?: number;
+	readonly page?: number;
+}

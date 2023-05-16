@@ -182,8 +182,8 @@ class AuthController {
     }
     async registration(req, res, next) {
         try {
-            const { login, password } = req.body;
-            await this.authService.register({ login, password });
+            const { login, password, } = req.body;
+            await this.authService.register({ login, password, });
             res.status(201).json({
                 status: 'registered',
             });
@@ -194,15 +194,15 @@ class AuthController {
     }
     async login(req, res, next) {
         try {
-            const { login, password } = req.body;
-            const user = await this.authService.login({ login, password });
+            const { login, password, } = req.body;
+            const user = await this.authService.login({ login, password, });
             const tokens = await this.authService.generateTokens(user);
             res.cookie(COOKIE_NAME, tokens.refreshToken, {
                 httpOnly: true,
                 secure: true,
                 maxAge: 60 * 24 * 30,
             });
-            res.json({ user, tokens });
+            res.json({ user, tokens, });
         }
         catch (error) {
             next(error);
@@ -240,6 +240,102 @@ authRouter.post('/login', body('login').isString(), body('password').isString(),
 authRouter.delete('/logout', authController.logout.bind(authController));
 authRouter.get('/refresh', authController.refresh.bind(authController));
 
+class PostsRepository {
+    databaseService;
+    constructor(databaseService) {
+        this.databaseService = databaseService;
+    }
+    async getAll() {
+        return null;
+    }
+    async getOne() {
+        return null;
+    }
+    async create() {
+        return null;
+    }
+    async update() {
+        return null;
+    }
+    async addFiles() {
+        return null;
+    }
+    async removeFiles() {
+        return null;
+    }
+    async remove() {
+        return null;
+    }
+}
+const postsRepository = new PostsRepository(databaseService);
+
+class PostsService {
+    postsRepository;
+    constructor(postsRepository) {
+        this.postsRepository = postsRepository;
+    }
+    async getAll() {
+        return null;
+    }
+    async getOne() {
+        return null;
+    }
+    async create() {
+        return null;
+    }
+    async update() {
+        return null;
+    }
+    async addFiles() {
+        return null;
+    }
+    async removeFiles() {
+        return null;
+    }
+    async remove() {
+        return null;
+    }
+}
+const postsService = new PostsService(postsRepository);
+
+class PostsController {
+    postsService;
+    constructor(postsService) {
+        this.postsService = postsService;
+    }
+    async getAll() {
+        return null;
+    }
+    async getOne() {
+        return null;
+    }
+    async create() {
+        return null;
+    }
+    async update() {
+        return null;
+    }
+    async addFiles() {
+        return null;
+    }
+    async removeFiles() {
+        return null;
+    }
+    async remove() {
+        return null;
+    }
+}
+const postsController = new PostsController(postsService);
+
+const postsRouter = Router();
+postsRouter.get('/posts', postsController.getAll.bind(postsController));
+postsRouter.get('/posts/:id', postsController.getOne.bind(postsController));
+postsRouter.post('/posts/create', postsController.create.bind(postsController));
+postsRouter.put('/posts/:id/update', postsController.update.bind(postsController));
+postsRouter.patch('/posts/:id/add-files', postsController.addFiles.bind(postsController));
+postsRouter.patch('/posts/:id/remove-files', postsController.removeFiles.bind(postsController));
+postsRouter.delete('/posts/:id/remove', postsController.remove.bind(postsController));
+
 config();
 const app = express();
 app.use(json(), cors(), cookieParser());
@@ -248,6 +344,7 @@ app.get('/ping', (_, res) => {
 });
 const mainRouter = Router();
 mainRouter.use('/auth', authRouter);
+mainRouter.use('/posts', postsRouter);
 app.use('/api', mainRouter);
 app.use(createErrorHandler());
 app.listen(PORT, async () => {

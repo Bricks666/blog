@@ -6,6 +6,7 @@ import { config } from 'dotenv';
 import { databaseService } from './database';
 import { authRouter } from './auth';
 import { PORT } from './shared/config';
+import { postsRouter } from './posts';
 
 config();
 
@@ -20,6 +21,7 @@ app.get('/ping', (_, res) => {
 const mainRouter = Router();
 
 mainRouter.use('/auth', authRouter);
+mainRouter.use('/posts', postsRouter);
 
 app.use('/api', mainRouter);
 
