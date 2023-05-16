@@ -1,6 +1,9 @@
 import type { Post as PostModel } from '@prisma/client';
 
-export interface PostDto extends PostModel {}
+export interface PostDto extends PostModel {
+	readonly authorLogin: string;
+	readonly files: string[];
+}
 
 export interface CreatePostBodyDto extends Partial<Pick<PostDto, 'content'>> {}
 

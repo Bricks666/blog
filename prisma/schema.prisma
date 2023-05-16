@@ -18,12 +18,12 @@ model User {
 }
 
 model Post {
-  id                Int                 @id @default(autoincrement())
-  authorId          Int
-  content           String?             @default("")
-  createdAt         DateTime?           @default(now())
-  author            User                @relation(fields: [authorId], references: [id])
-  PostAttachedFiles PostAttachedFiles[]
+  id        Int                 @id @default(autoincrement())
+  authorId  Int
+  content   String?             @default("")
+  createdAt DateTime?           @default(now())
+  author    User                @relation(fields: [authorId], references: [id])
+  files     PostAttachedFiles[]
 }
 
 model PostAttachedFiles {

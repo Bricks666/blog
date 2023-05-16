@@ -1,14 +1,26 @@
 import { type DatabaseService, databaseService } from '../database';
+import { FULL_POST_INCLUDE } from './config';
+import type { FullPost } from './types';
 
 export class PostsRepository {
 	constructor(private readonly databaseService: DatabaseService) {}
 
-	async getAll() {
-		return null;
+	async getAll(page: number, count: number): Promise<FullPost[]> {
+		const offset = (page - 1) * count;
+		return this.databaseService.post.findMany({
+			include: FULL_POST_INCLUDE,
+			take: count,
+			skip: offset,
+		});
 	}
 
-	async getOne() {
-		return null;
+	async getOne(id: number): Promise<FullPost | null> {
+		return this.databaseService.post.findUnique({
+			where: {
+				id,
+			},
+			include: FULL_POST_INCLUDE,
+		});
 	}
 
 	async create() {
