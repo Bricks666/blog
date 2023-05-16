@@ -19,6 +19,12 @@ export class AuthController {
 			const user = await this.authService.verifyUser(token);
 			const tokens = await this.authService.generateTokens(user);
 
+			res.cookie(COOKIE_NAME, tokens.refreshToken, {
+				httpOnly: true,
+				secure: true,
+				maxAge: 60 * 24 * 30,
+			});
+
 			res.json({
 				user,
 				tokens,
@@ -87,6 +93,12 @@ export class AuthController {
 			const token = extractRefreshToken(req);
 			const user = await this.authService.verifyUser(token);
 			const tokens = await this.authService.generateTokens(user);
+
+			res.cookie(COOKIE_NAME, tokens.refreshToken, {
+				httpOnly: true,
+				secure: true,
+				maxAge: 60 * 24 * 30,
+			});
 
 			res.json(tokens);
 		} catch (error) {

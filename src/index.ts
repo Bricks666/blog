@@ -21,6 +21,8 @@ const mainRouter = Router();
 
 mainRouter.use('/auth', authRouter);
 
+app.use('/api', mainRouter);
+
 app.use(createErrorHandler());
 
 app.listen(PORT, async () => {

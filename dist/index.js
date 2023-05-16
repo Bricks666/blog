@@ -99,7 +99,7 @@ class AuthService {
         this.usersService = usersService;
     }
     async register(dto) {
-        const { login, password } = dto;
+        const { login, password, } = dto;
         const hashedPassword = hash(password, PASSWORD_SECRET);
         await this.usersService.create({
             login,
@@ -123,7 +123,7 @@ class AuthService {
             }),
             await sign(user, TOKEN_SECRET, {
                 expiresIn: '30d',
-            }),
+            })
         ];
         const [accessToken, refreshToken] = await Promise.all(tokens);
         return {
@@ -147,20 +147,13 @@ class AuthService {
 const authService = new AuthService(usersService);
 
 const extractRefreshToken = (req) => {
-    const cookie = req.cookies[COOKIE_NAME];
-    if (!cookie) {
+    const token = req.cookies[COOKIE_NAME];
+    if (!token) {
         throw new ForbiddenError({
             message: 'Cookie is empty',
         });
     }
-    const [tokenType, tokenValue] = cookie.split(' ');
-    if (tokenType !== 'Bearer' || !tokenValue) {
-        throw new ForbiddenError({
-            message: 'Invalid token',
-            cause: [tokenType, tokenValue],
-        });
-    }
-    return tokenValue;
+    return token;
 };
 
 class AuthController {
@@ -173,6 +166,11 @@ class AuthController {
             const token = extractRefreshToken(req);
             const user = await this.authService.verifyUser(token);
             const tokens = await this.authService.generateTokens(user);
+            res.cookie(COOKIE_NAME, tokens.refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 60 * 24 * 30,
+            });
             res.json({
                 user,
                 tokens,
@@ -221,6 +219,11 @@ class AuthController {
             const token = extractRefreshToken(req);
             const user = await this.authService.verifyUser(token);
             const tokens = await this.authService.generateTokens(user);
+            res.cookie(COOKIE_NAME, tokens.refreshToken, {
+                httpOnly: true,
+                secure: true,
+                maxAge: 60 * 24 * 30,
+            });
             res.json(tokens);
         }
         catch (error) {
@@ -231,11 +234,11 @@ class AuthController {
 const authController = new AuthController(authService);
 
 const authRouter = Router();
-authRouter.get('/', authController.auth);
-authRouter.put('/registration', body('login').isString(), body('password').isString(), checkValidateErrors(), authController.registration);
-authRouter.post('/login', body('login').isString(), body('password').isString(), checkValidateErrors(), authController.login);
-authRouter.delete('/logout', authController.logout);
-authRouter.get('/refresh', authController.refresh);
+authRouter.get('/', authController.auth.bind(authController));
+authRouter.put('/registration', body('login').isString(), body('password').isString(), checkValidateErrors(), authController.registration.bind(authController));
+authRouter.post('/login', body('login').isString(), body('password').isString(), checkValidateErrors(), authController.login.bind(authController));
+authRouter.delete('/logout', authController.logout.bind(authController));
+authRouter.get('/refresh', authController.refresh.bind(authController));
 
 config();
 const app = express();
@@ -245,6 +248,7 @@ app.get('/ping', (_, res) => {
 });
 const mainRouter = Router();
 mainRouter.use('/auth', authRouter);
+app.use('/api', mainRouter);
 app.use(createErrorHandler());
 app.listen(PORT, async () => {
     await databaseService.$connect();

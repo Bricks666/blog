@@ -22,20 +22,12 @@ export const extractAccessToken = (req: Request): string => {
 };
 
 export const extractRefreshToken = (req: Request): string => {
-	const cookie = req.cookies[COOKIE_NAME];
-	if (!cookie) {
+	const token = req.cookies[COOKIE_NAME];
+	if (!token) {
 		throw new ForbiddenError({
 			message: 'Cookie is empty',
 		});
 	}
 
-	const [tokenType, tokenValue] = cookie.split(' ');
-	if (tokenType !== 'Bearer' || !tokenValue) {
-		throw new ForbiddenError({
-			message: 'Invalid token',
-			cause: [tokenType, tokenValue],
-		});
-	}
-
-	return tokenValue;
+	return token;
 };
