@@ -1,8 +1,9 @@
 import { NotFoundError } from '@bricks-ether/server-utils';
 import { type PostsRepository, postsRepository } from './posts.repository';
 import { flatPost } from './lib';
+import { divisionFileRoot } from './config';
 import type { PaginationQueryDto } from '../shared/types';
-import type { PostDto } from './posts.dto';
+import type { CreatePostDto, PostDto } from './posts.dto';
 
 export class PostsService {
 	constructor(private readonly postsRepository: PostsRepository) {}
@@ -25,8 +26,17 @@ export class PostsService {
 		return flatPost(post);
 	}
 
-	async create() {
-		return null;
+	async create(dto: CreatePostDto): Promise<PostDto> {
+		const { authorId, files, content, } = dto;
+		const filePaths = files.map((file) => divisionFileRoot(file.path));
+
+		const post = await this.postsRepository.create({
+			authorId,
+			content,
+			files: filePaths,
+		});
+
+		return flatPost(post);
 	}
 
 	async update() {
@@ -41,8 +51,8 @@ export class PostsService {
 		return null;
 	}
 
-	async remove() {
-		return null;
+	async remove(id: number): Promise<void> {
+		await this.postsRepository.remove(id);
 	}
 }
 

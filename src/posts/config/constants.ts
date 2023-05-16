@@ -1,4 +1,4 @@
-import { SECURITY_USER_SELECT } from '../users';
+import { SECURITY_USER_SELECT } from '../../users';
 import type { Prisma } from '@prisma/client';
 
 export const FULL_POST_INCLUDE = {

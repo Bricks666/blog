@@ -1,5 +1,5 @@
-import type { PostDto } from './posts.dto';
-import type { FullPost } from './types';
+import type { PostDto } from '../posts.dto';
+import type { FullPost } from '../types';
 
 export const flatPost = (post: FullPost): PostDto => {
 	return {

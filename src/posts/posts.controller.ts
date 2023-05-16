@@ -1,7 +1,12 @@
-import { PaginationQueryDto } from '../shared/types';
+import { PaginationQueryDto, VoidResponse } from '../shared/types';
+import { AuthUserRequest } from '../auth';
 import { type PostsService, postsService } from './posts.service';
 import type { NextFunction, Request, Response } from 'express';
-import type { PostDto, SinglePostParamsDto } from './posts.dto';
+import type {
+	CreatePostBodyDto,
+	PostDto,
+	SinglePostParamsDto
+} from './posts.dto';
 
 export class PostsController {
 	constructor(private readonly postsService: PostsService) {}
@@ -34,8 +39,29 @@ export class PostsController {
 		}
 	}
 
-	async create() {
-		return null;
+	async create(
+		req: Request<unknown, PostDto, CreatePostBodyDto>,
+		res: Response<PostDto>,
+		next: NextFunction
+	) {
+		try {
+			const { content, } = req.body;
+			const files = req.files as Array<globalThis.Express.Multer.File>;
+
+			const { user, } = req as AuthUserRequest<
+				unknown,
+				PostDto,
+				CreatePostBodyDto
+			>;
+			const post = await this.postsService.create({
+				authorId: user.id,
+				files,
+				content,
+			});
+			res.json(post);
+		} catch (error) {
+			next(error);
+		}
 	}
 
 	async update() {
@@ -50,8 +76,20 @@ export class PostsController {
 		return null;
 	}
 
-	async remove() {
-		return null;
+	async remove(
+		req: Request<SinglePostParamsDto, VoidResponse>,
+		res: Response<VoidResponse>,
+		next: NextFunction
+	) {
+		try {
+			const { id, } = req.params;
+			await this.postsService.remove(id);
+			res.json({
+				status: 'removed',
+			});
+		} catch (error) {
+			next(error);
+		}
 	}
 }
 

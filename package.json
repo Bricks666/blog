@@ -26,7 +26,7 @@
 	},
 	"homepage": "https://github.com/Bricks666/blog#readme",
 	"dependencies": {
-		"@bricks-ether/server-utils": "^1.1.2",
+		"@bricks-ether/server-utils": "^1.1.3",
 		"@prisma/client": "^4.14.0",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",

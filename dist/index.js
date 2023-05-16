@@ -1,19 +1,26 @@
-import { NotFoundError, ForbiddenError, checkValidateErrors, createErrorHandler } from '@bricks-ether/server-utils';
+import { NotFoundError, ForbiddenError, UnauthorizedError, checkValidateErrors, BadRequestError, filesValidators, createErrorHandler } from '@bricks-ether/server-utils';
 import express, { Router, json } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { dirname, resolve, join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import jwt from 'jsonwebtoken';
-import { body, query, param } from 'express-validator';
+import { body, param, query, oneOf } from 'express-validator';
+import { mkdir } from 'node:fs/promises';
+import multer, { diskStorage } from 'multer';
 
 const databaseService = new PrismaClient();
 
+/* eslint-disable no-underscore-dangle */
 const PORT = process.env.PORT ?? 5000;
 const PASSWORD_SECRET = process.env.PASSWORD_SECRET ?? 'super_puper_password_secret';
 const TOKEN_SECRET = process.env.TOKEN_SECRET ?? 'super_puper_token_secret';
 const COOKIE_NAME = process.env.COOKIE_NAME ?? 'cookie name';
+const __dirname = fileURLToPath(new URL(dirname(import.meta.url)));
+fileURLToPath(new URL(import.meta.url));
 
 const hash = (content, solt) => {
     const hasher = createHash('sha256');
@@ -151,6 +158,22 @@ class AuthService {
 }
 const authService = new AuthService(usersService);
 
+const extractAccessToken = (req) => {
+    const header = req.headers.authorization;
+    if (!header) {
+        throw new UnauthorizedError({
+            message: 'There is not auth header',
+        });
+    }
+    const [tokenType, tokenValue] = header.split(' ');
+    if (tokenType !== 'Bearer' || !tokenValue) {
+        throw new UnauthorizedError({
+            message: 'Invalid token',
+            cause: [tokenType, tokenValue],
+        });
+    }
+    return tokenValue;
+};
 const extractRefreshToken = (req) => {
     const token = req.cookies[COOKIE_NAME];
     if (!token) {
@@ -245,11 +268,49 @@ authRouter.post('/login', body('login').isString(), body('password').isString(),
 authRouter.delete('/logout', authController.logout.bind(authController));
 authRouter.get('/refresh', authController.refresh.bind(authController));
 
+// Need for type safety in chain usage
+const createRequiredAuth = () => {
+    return async (req, _, next) => {
+        try {
+            const accessToken = extractAccessToken(req);
+            const user = await authService.verifyUser(accessToken);
+            req.user =
+                user;
+            return next();
+        }
+        catch (error) {
+            return next(error);
+        }
+    };
+};
+
 const FULL_POST_INCLUDE = {
     author: {
         select: SECURITY_USER_SELECT,
     },
     files: true,
+};
+
+const ROOT = resolve(__dirname, 'public');
+const storage = diskStorage({
+    destination: async (_, _file, callback) => {
+        const destination = join(ROOT, 'posts');
+        await mkdir(destination, { recursive: true });
+        callback(null, destination);
+    },
+    filename: (_, file, callback) => {
+        const extension = extname(file.originalname);
+        const randomNumber = Math.round(Math.random() * 1e5);
+        const fileName = `${randomNumber}-${Date.now()}${extension}`;
+        console.info(fileName);
+        callback(null, fileName);
+    },
+});
+const postsFileLoader = multer({
+    storage,
+});
+const divisionFileRoot = (path) => {
+    return path.replace(ROOT, '');
 };
 
 class PostsRepository {
@@ -273,8 +334,22 @@ class PostsRepository {
             include: FULL_POST_INCLUDE,
         });
     }
-    async create() {
-        return null;
+    async create(dto) {
+        const { authorId, files, content } = dto;
+        const filePaths = files.map((file) => ({ filePath: file }));
+        return this.databaseService.post.create({
+            data: {
+                authorId,
+                content,
+                files: {
+                    createMany: {
+                        data: filePaths,
+                        skipDuplicates: true,
+                    },
+                },
+            },
+            include: FULL_POST_INCLUDE,
+        });
     }
     async update() {
         return null;
@@ -285,8 +360,12 @@ class PostsRepository {
     async removeFiles() {
         return null;
     }
-    async remove() {
-        return null;
+    async remove(id) {
+        await this.databaseService.post.delete({
+            where: {
+                id,
+            },
+        });
     }
 }
 const postsRepository = new PostsRepository(databaseService);
@@ -300,6 +379,10 @@ const flatPost = (post) => {
         createdAt: post.createdAt,
         files: post.files.map((file) => file.filePath),
     };
+};
+
+const createSinglePostChain = () => {
+    return param('id').toInt().isInt();
 };
 
 class PostsService {
@@ -321,8 +404,15 @@ class PostsService {
         }
         return flatPost(post);
     }
-    async create() {
-        return null;
+    async create(dto) {
+        const { authorId, files, content } = dto;
+        const filePaths = files.map((file) => divisionFileRoot(file.path));
+        const post = await this.postsRepository.create({
+            authorId,
+            content,
+            files: filePaths,
+        });
+        return flatPost(post);
     }
     async update() {
         return null;
@@ -333,8 +423,8 @@ class PostsService {
     async removeFiles() {
         return null;
     }
-    async remove() {
-        return null;
+    async remove(id) {
+        await this.postsRepository.remove(id);
     }
 }
 const postsService = new PostsService(postsRepository);
@@ -364,8 +454,21 @@ class PostsController {
             next(error);
         }
     }
-    async create() {
-        return null;
+    async create(req, res, next) {
+        try {
+            const { content } = req.body;
+            const files = req.files;
+            const { user } = req;
+            const post = await this.postsService.create({
+                authorId: user.id,
+                files,
+                content,
+            });
+            res.json(post);
+        }
+        catch (error) {
+            next(error);
+        }
     }
     async update() {
         return null;
@@ -376,20 +479,58 @@ class PostsController {
     async removeFiles() {
         return null;
     }
-    async remove() {
-        return null;
+    async remove(req, res, next) {
+        try {
+            const { id } = req.params;
+            await this.postsService.remove(id);
+            res.json({
+                status: 'removed',
+            });
+        }
+        catch (error) {
+            next(error);
+        }
     }
 }
 const postsController = new PostsController(postsService);
 
+const createIsPostAuthorChecker = (paramName = 'id') => {
+    return async (req, _, next) => {
+        try {
+            const id = Number(req.params[paramName]);
+            if (Number.isNaN(id)) {
+                throw new BadRequestError({
+                    message: `There is not post id called ${paramName}`,
+                });
+            }
+            const { user } = req;
+            const post = await postsService.getOne(id);
+            if (post.authorId !== user.id) {
+                throw new ForbiddenError({
+                    message: `User: ${user.id} can't do this operation with post: ${post.id}`,
+                });
+            }
+            return next();
+        }
+        catch (error) {
+            next(error);
+        }
+    };
+};
+
 const postsRouter = Router();
 postsRouter.get('/', query('count').optional().toInt().isInt(), query('page').optional().toInt().isInt(), checkValidateErrors(), postsController.getAll.bind(postsController));
-postsRouter.get('/:id', param('id').toInt().isInt(), checkValidateErrors(), postsController.getOne.bind(postsController));
-postsRouter.post('/create', postsController.create.bind(postsController));
-postsRouter.put('/:id/update', postsController.update.bind(postsController));
-postsRouter.patch('/:id/add-files', postsController.addFiles.bind(postsController));
-postsRouter.patch('/:id/remove-files', postsController.removeFiles.bind(postsController));
-postsRouter.delete('/:id/remove', postsController.remove.bind(postsController));
+postsRouter.get('/:id', createSinglePostChain(), checkValidateErrors(), postsController.getOne.bind(postsController));
+postsRouter.post('/create', createRequiredAuth(), postsFileLoader.array('files'), oneOf([
+    body('content').isString().trim().notEmpty(),
+    body('files')
+        .custom(filesValidators.existsArray)
+        .custom(filesValidators.arrayNotEmpty),
+]), checkValidateErrors(), postsController.create.bind(postsController));
+postsRouter.put('/:id/update', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.update.bind(postsController));
+postsRouter.patch('/:id/add-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsFileLoader.array('files'), postsController.addFiles.bind(postsController));
+postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.removeFiles.bind(postsController));
+postsRouter.delete('/:id/remove', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.remove.bind(postsController));
 
 config();
 const app = express();

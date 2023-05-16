@@ -1,5 +1,6 @@
 import { type DatabaseService, databaseService } from '../database';
 import { FULL_POST_INCLUDE } from './config';
+import type { CreatePostRepositoryDto } from './posts.dto';
 import type { FullPost } from './types';
 
 export class PostsRepository {
@@ -23,8 +24,22 @@ export class PostsRepository {
 		});
 	}
 
-	async create() {
-		return null;
+	async create(dto: CreatePostRepositoryDto): Promise<FullPost> {
+		const { authorId, files, content, } = dto;
+		const filePaths = files.map((file) => ({ filePath: file, }));
+		return this.databaseService.post.create({
+			data: {
+				authorId,
+				content,
+				files: {
+					createMany: {
+						data: filePaths,
+						skipDuplicates: true,
+					},
+				},
+			},
+			include: FULL_POST_INCLUDE,
+		});
 	}
 
 	async update() {
@@ -39,8 +54,12 @@ export class PostsRepository {
 		return null;
 	}
 
-	async remove() {
-		return null;
+	async remove(id: number): Promise<void> {
+		await this.databaseService.post.delete({
+			where: {
+				id,
+			},
+		});
 	}
 }
 
