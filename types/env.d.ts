@@ -5,5 +5,8 @@ declare namespace NodeJS {
 
 	interface ProcessEnv {
 		readonly PORT: string;
+		readonly TOKEN_SECRET: string;
+		readonly PASSWORD_SECRET: string;
+		readonly COOKIE_NAME: string;
 	}
 }
