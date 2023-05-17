@@ -1,6 +1,7 @@
 import { defineConfig } from 'rollup';
 import commonJs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
+import json from '@rollup/plugin-json';
 
 export default defineConfig({
 	input: './src/index.ts',
@@ -8,11 +9,11 @@ export default defineConfig({
 		dir: 'dist',
 		format: 'esm',
 	},
-	external: [/\.json/],
 	plugins: [
 		typescript({
 			tsconfig: './tsconfig.json',
 		}),
+		json(),
 		commonJs({ extensions: ['.js', '.ts'] }),
 	],
 });

@@ -5,6 +5,7 @@
 	"main": "./dist/index.js",
 	"type": "module",
 	"scripts": {
+		"start:dev": "npx prisma migrate deploy && node ./dist/index.js",
 		"start:prod": "npx prisma migrate deploy && node ./index.js",
 		"dev": "nodemon ./dist/index.js",
 		"build": "rollup -c ./rollup.config.js",
@@ -12,7 +13,7 @@
 		"lint": "eslint --ext .ts src/",
 		"lint:fix": "eslint --ext .ts src/ --fix",
 		"format": "prettier --write --config ./.prettierrc src",
-    "prepare": "husky install"
+		"prepare": "husky install"
 	},
 	"repository": {
 		"type": "git",
@@ -26,20 +27,28 @@
 	},
 	"homepage": "https://github.com/Bricks666/blog#readme",
 	"dependencies": {
+		"@bricks-ether/server-utils": "^1.1.3",
 		"@prisma/client": "^4.14.0",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
+		"dotenv": "^16.0.3",
 		"express": "^4.18.2",
-		"jsonwebtoken": "^9.0.0"
+		"express-validator": "^7.0.1",
+		"jsonwebtoken": "^9.0.0",
+		"multer": "^1.4.5-lts.1",
+		"swagger-ui-express": "^4.6.3"
 	},
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^25.0.0",
+		"@rollup/plugin-json": "^6.0.0",
 		"@rollup/plugin-typescript": "^11.1.1",
 		"@types/cookie-parser": "^1.4.3",
 		"@types/cors": "^2.8.13",
 		"@types/express": "^4.17.17",
 		"@types/jsonwebtoken": "^9.0.2",
+		"@types/multer": "^1.4.7",
 		"@types/node": "^20.1.4",
+		"@types/swagger-ui-express": "^4.1.3",
 		"@typescript-eslint/eslint-plugin": "^5.59.5",
 		"@typescript-eslint/parser": "^5.59.5",
 		"eslint": "^8.40.0",
