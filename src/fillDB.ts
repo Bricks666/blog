@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { databaseService } from './database';
-import { CreateUserDto, UserDto, usersService } from './users';
+import { CreateUserDto, SecurityUserDto, usersService } from './users';
 import { STATIC_SERVE_ROOT } from './shared/config';
 import { withoutStaticRoot } from './shared/lib';
 
@@ -35,7 +35,7 @@ const createUsers = async () => {
 
 const POSTS_COUNT = 5;
 
-const createPosts = async (users: UserDto[]) => {
+const createPosts = async (users: SecurityUserDto[]) => {
 	const postsCount = await Promise.all(
 		users.map((user) =>
 			databaseService.post.count({
