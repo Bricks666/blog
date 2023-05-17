@@ -22,7 +22,7 @@ model Post {
   authorId  Int
   content   String?             @default("")
   createdAt DateTime?           @default(now())
-  author    User                @relation(fields: [authorId], references: [id])
+  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   files     PostAttachedFiles[]
 }
 
