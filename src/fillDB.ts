@@ -2,9 +2,10 @@
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { databaseService } from './database';
-import { CreateUserDto, SecurityUserDto, usersService } from './users';
+import { CreateUserDto, SecurityUserDto } from './users';
 import { STATIC_SERVE_ROOT } from './shared/config';
 import { withoutStaticRoot } from './shared/lib';
+import { authService } from './auth';
 
 const mockUsers: CreateUserDto[] = [
 	{
@@ -30,7 +31,7 @@ const createUsers = async () => {
 	}
 
 	// For password hashing
-	return Promise.all(mockUsers.map((user) => usersService.create(user)));
+	return Promise.all(mockUsers.map((user) => authService.register(user)));
 };
 
 const POSTS_COUNT = 5;
