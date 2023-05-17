@@ -11,6 +11,7 @@ COPY ./rollup.config.js .
 COPY prisma ./prisma
 RUN npx prisma generate
 
+COPY openapi.docs.json /app/
 COPY src src
 RUN npm run build
 

@@ -1,15 +1,17 @@
 import { NotFoundError, ForbiddenError, UnauthorizedError, checkValidateErrors, filesValidators, BadRequestError, createErrorHandler } from '@bricks-ether/server-utils';
 import express, { Router, json, static as static$1 } from 'express';
+import { serve, setup } from 'swagger-ui-express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import { dirname, resolve, join, extname } from 'node:path';
+import { dirname, resolve, join as join$1, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import { resolve as resolve$1, join } from 'path';
 import { body, param, query, oneOf } from 'express-validator';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, unlink } from 'node:fs/promises';
 import multer, { diskStorage } from 'multer';
 
 const databaseService = new PrismaClient();
@@ -56,6 +58,9 @@ const verify = async (token, secretOrPrivateKey, options = {}) => {
 
 const withoutStaticRoot = (path) => {
     return path.replace(STATIC_SERVE_ROOT, '');
+};
+const withStaticRoot = (path) => {
+    return resolve$1(join(STATIC_SERVE_ROOT, path));
 };
 
 const SECURITY_USER_SELECT = {
@@ -298,7 +303,7 @@ const FULL_POST_INCLUDE = {
 
 const storage = diskStorage({
     destination: async (_, _file, callback) => {
-        const destination = join(STATIC_SERVE_ROOT, 'posts');
+        const destination = join$1(STATIC_SERVE_ROOT, 'posts');
         await mkdir(destination, { recursive: true, });
         callback(null, destination);
     },
@@ -436,7 +441,7 @@ class PostsService {
         this.postsRepository = postsRepository;
     }
     async getAll(pagination) {
-        const { count = 20, page = 1, } = pagination;
+        const { count = 20, page = 1 } = pagination;
         const posts = await this.postsRepository.getAll(page, count);
         return posts.map(flatPost);
     }
@@ -450,7 +455,7 @@ class PostsService {
         return flatPost(post);
     }
     async create(dto) {
-        const { authorId, files, content, } = dto;
+        const { authorId, files, content } = dto;
         const filePaths = files.map((file) => withoutStaticRoot(file.path));
         const post = await this.postsRepository.create({
             authorId,
@@ -470,7 +475,8 @@ class PostsService {
         return flatPost(post);
     }
     async addFiles(dto) {
-        const { files, id, } = dto;
+        const { files, id } = dto;
+        await this.getOne(dto.id);
         const filePaths = files.map((file) => withoutStaticRoot(file.path));
         const post = await this.postsRepository.addFiles({
             id,
@@ -479,11 +485,17 @@ class PostsService {
         return flatPost(post);
     }
     async removeFiles(dto) {
+        await this.getOne(dto.id);
         const post = await this.postsRepository.removeFiles(dto);
+        const deletion = dto.filePaths.map((path) => unlink(withStaticRoot(path)));
+        await Promise.all(deletion);
         return flatPost(post);
     }
     async remove(id) {
+        const post = await this.getOne(id);
         await this.postsRepository.remove(id);
+        const deletion = post.files.map((path) => unlink(withStaticRoot(path)));
+        await Promise.all(deletion);
     }
 }
 const postsService = new PostsService(postsRepository);
@@ -618,6 +630,920 @@ postsRouter.patch('/:id/add-files', createSinglePostChain(), createRequiredAuth(
 postsRouter.patch('/:id/remove-files', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), body('filePaths').isArray({ min: 1, }), checkValidateErrors(), postsController.removeFiles.bind(postsController));
 postsRouter.delete('/:id/remove', createSinglePostChain(), createRequiredAuth(), createIsPostAuthorChecker(), postsController.remove.bind(postsController));
 
+var openapi = "3.0.0";
+var info = {
+	title: "WelbeX blog api",
+	description: "Документация для тестового задания от компании WelbeX",
+	version: "1.0.0"
+};
+var servers = [
+	{
+		url: "http://localhost:5000"
+	}
+];
+var paths = {
+	"/api/auth": {
+		get: {
+			summary: "Авторизация по куки",
+			description: "Авторизация пользователя по куки, если он входил до этого в аккаунт",
+			tags: [
+				"Авторизация"
+			],
+			security: [
+				{
+					cookie: [
+					]
+				}
+			],
+			parameters: [
+			],
+			responses: {
+				"200": {
+					description: "Данные о пользователе и токены доступа",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/AuthResponseDto"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/auth/registration": {
+		put: {
+			summary: "Регистрация",
+			description: "Регистрация нового пользователя в сервисе",
+			tags: [
+				"Авторизация"
+			],
+			parameters: [
+			],
+			requestBody: {
+				required: true,
+				description: "Данные для регистрации",
+				content: {
+					"application/json": {
+						schema: {
+							$ref: "#/components/schemas/CreateUserDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"201": {
+					description: "Подтверждение успешной регистрации",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/VoidResponseDto"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/auth/login": {
+		post: {
+			summary: "Вход",
+			description: "Вход пользователя в аккаунт",
+			tags: [
+				"Авторизация"
+			],
+			parameters: [
+			],
+			requestBody: {
+				required: true,
+				description: "",
+				content: {
+					"application/json": {
+						schema: {
+							$ref: "#/components/schemas/LoginDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"200": {
+					description: "",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/TokensPairDto"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Пользователь с таким логином не зарегистрирован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/auth/logout": {
+		"delete": {
+			summary: "Выход",
+			description: "Выход из аккаунта пользователя",
+			tags: [
+				"Авторизация"
+			],
+			parameters: [
+			],
+			responses: {
+				"200": {
+					description: "Подтверждение успешного выхода",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/VoidResponseDto"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/auth/refresh": {
+		get: {
+			summary: "Обновление токена",
+			description: "Обновление токена доступа по токену обновления",
+			tags: [
+				"Авторизация"
+			],
+			security: [
+				{
+					cookie: [
+					]
+				}
+			],
+			parameters: [
+			],
+			responses: {
+				"200": {
+					"403": {
+						description: "Отсутствует токен обновления",
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/TokensPairDto"
+								}
+							}
+						}
+					},
+					description: "Обновленные токены",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/TokensPairDto"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts": {
+		get: {
+			summary: "Получение постов",
+			description: "Получение постов по странично",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					name: "page",
+					description: "Номер страница",
+					"in": "query",
+					type: "number",
+					example: 1,
+					defaultValue: 1
+				},
+				{
+					name: "count",
+					description: "Количество постов на странице",
+					"in": "query",
+					type: "number",
+					example: 20,
+					defaultValue: 20
+				}
+			],
+			responses: {
+				"200": {
+					description: "Посты на странице",
+					content: {
+						"application/json": {
+							schema: {
+								type: "array",
+								items: {
+									$ref: "#/components/schemas/PostDto"
+								}
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/{id}": {
+		get: {
+			summary: "Получение поста",
+			description: "Получение конкретного поста",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					$ref: "#/components/schemas/SinglePostParamsDto"
+				}
+			],
+			responses: {
+				"200": {
+					description: "Пост",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/PostDto"
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Такого поста нет",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/create": {
+		post: {
+			summary: "Создание поста",
+			description: "Создание поста",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+			],
+			security: [
+				{
+					bearer: [
+					]
+				}
+			],
+			requestBody: {
+				required: true,
+				description: "Данные нового поста",
+				content: {
+					"multipart/form-data": {
+						schema: {
+							$ref: "#/components/schemas/CreatePostBodyDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"201": {
+					description: "Созданный пост",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/PostDto"
+							}
+						}
+					}
+				},
+				"401": {
+					description: "Пользователь не авторизован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/{id}/update": {
+		patch: {
+			summary: "Обновление поста",
+			description: "Обновление текстового содержания поста",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					$ref: "#/components/schemas/SinglePostParamsDto"
+				}
+			],
+			requestBody: {
+				required: false,
+				description: "Тестовый контент поста",
+				content: {
+					"application/json": {
+						schema: {
+							$ref: "#/components/schemas/UpdatePostBodyDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"200": {
+					description: "Обновленный пост",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/PostDto"
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"401": {
+					description: "Пользователь не авторизован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Такого поста нет",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/{id}/add-files": {
+		patch: {
+			summary: "Добавление файлов",
+			description: "Добавление файлов к посту",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					$ref: "#/components/schemas/SinglePostParamsDto"
+				}
+			],
+			requestBody: {
+				required: true,
+				description: "Файлы",
+				content: {
+					"multipart/form-data": {
+						schema: {
+							$ref: "#/components/schemas/AddFilesDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"200": {
+					description: "Обновленный пост",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/PostDto"
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"401": {
+					description: "Пользователь не авторизован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Такого поста нет",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/{id}/remove-file": {
+		patch: {
+			summary: "Удаление файлов",
+			description: "Удаление файлов поста",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					$ref: "#/components/schemas/SinglePostParamsDto"
+				}
+			],
+			requestBody: {
+				required: true,
+				description: "Файлы для удаления",
+				content: {
+					"application/json": {
+						schema: {
+							$ref: "#/components/schemas/RemoveFilesDto"
+						}
+					}
+				}
+			},
+			responses: {
+				"200": {
+					description: "Обновленный пост",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/PostDto"
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"401": {
+					description: "Пользователь не авторизован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Такого поста нет",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"/api/posts/{id}/remove": {
+		"delete": {
+			summary: "Удаление поста",
+			description: "Удаление поста",
+			tags: [
+				"Посты"
+			],
+			parameters: [
+				{
+					$ref: "#/components/schemas/SinglePostParamsDto"
+				}
+			],
+			responses: {
+				"200": {
+					description: "Подтверждение успешного удаления",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/VoidResponseDto"
+							}
+						}
+					}
+				},
+				"400": {
+					description: "Ошибки в данных запроса",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"401": {
+					description: "Пользователь не авторизован",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				},
+				"404": {
+					description: "Такого поста нет",
+					content: {
+						"application/json": {
+							schema: {
+								$ref: "#/components/schemas/HTTPError"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+var components = {
+	securitySchemes: {
+		cookie: {
+			type: "apiKey",
+			"in": "cookie",
+			name: "connect.sid"
+		},
+		bearer: {
+			scheme: "bearer",
+			bearerFormat: "JWT",
+			type: "http"
+		}
+	},
+	schemas: {
+		LoginDto: {
+			type: "object",
+			properties: {
+				login: {
+					type: "string",
+					description: "Логин",
+					example: "login"
+				},
+				password: {
+					type: "string",
+					description: "Пароль",
+					example: "password"
+				}
+			},
+			required: [
+				"login",
+				"password"
+			]
+		},
+		TokensPairDto: {
+			type: "object",
+			properties: {
+				accessToken: {
+					type: "string",
+					description: "Токен доступа",
+					example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+				},
+				refreshToken: {
+					type: "string",
+					description: "Токен обновления",
+					example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+				}
+			},
+			required: [
+				"accessToken",
+				"refreshToken"
+			]
+		},
+		AuthResponseDto: {
+			type: "object",
+			properties: {
+				user: {
+					description: "Авторизованный пользователь",
+					allOf: [
+						{
+							$ref: "#/components/schemas/SecurityUserDto"
+						}
+					]
+				},
+				tokens: {
+					description: "Токены пользователя",
+					allOf: [
+						{
+							$ref: "#/components/schemas/TokensPairDto"
+						}
+					]
+				}
+			},
+			required: [
+				"user",
+				"tokens"
+			]
+		},
+		UserDto: {
+			type: "object",
+			properties: {
+				id: {
+					type: "number",
+					description: "Идентификатор пользователя",
+					example: 1
+				},
+				login: {
+					type: "string",
+					description: "Логин",
+					example: "login"
+				},
+				password: {
+					type: "string",
+					description: "Пароль",
+					example: "password"
+				}
+			},
+			required: [
+				"id",
+				"login",
+				"password"
+			]
+		},
+		SecurityUserDto: {
+			type: "object",
+			properties: {
+				id: {
+					type: "number",
+					description: "Идентификатор пользователя",
+					example: 1
+				},
+				login: {
+					type: "string",
+					description: "Логин",
+					example: "login"
+				}
+			},
+			required: [
+				"id",
+				"login"
+			]
+		},
+		CreateUserDto: {
+			type: "object",
+			properties: {
+				login: {
+					type: "string",
+					description: "Логин",
+					example: "login"
+				},
+				password: {
+					type: "string",
+					description: "Пароль",
+					example: "password"
+				}
+			},
+			required: [
+				"login",
+				"password"
+			]
+		},
+		PostDto: {
+			type: "object",
+			properties: {
+				id: {
+					type: "number",
+					description: "Идентификатор поста",
+					example: 1
+				},
+				authorId: {
+					type: "number",
+					description: "Идентификатор автора",
+					example: 1
+				},
+				authorLogin: {
+					type: "string",
+					description: "Логин автора",
+					example: "Strange man"
+				},
+				content: {
+					type: "string",
+					description: "Тестовый контент поста",
+					example: "My good day"
+				},
+				files: {
+					type: "array",
+					description: "Ссылки на файлы в посте",
+					example: [
+						"path/to/file.jpg"
+					],
+					items: {
+						type: "string"
+					}
+				},
+				createdAt: {
+					type: "string",
+					description: "Дата создания поста",
+					example: "2023-05-17T11:50:59.864Z"
+				}
+			},
+			required: [
+				"id",
+				"authorId",
+				"authorLogin",
+				"createdAt",
+				"content",
+				"files"
+			]
+		},
+		CreatePostBodyDto: {
+			type: "object",
+			properties: {
+				content: {
+					type: "string",
+					description: "Текстовый контент поста",
+					example: "My good day"
+				},
+				files: {
+					type: "array",
+					description: "Файлы поста",
+					example: [
+						{
+						}
+					],
+					items: {
+					}
+				}
+			}
+		},
+		UpdatePostBodyDto: {
+			type: "object",
+			properties: {
+				content: {
+					type: "string",
+					description: "Текстовый контент поста",
+					example: "My good day"
+				}
+			}
+		},
+		AddFilesDto: {
+			type: "object",
+			properties: {
+				files: {
+					type: "array",
+					description: "Файлы для добавления к посту",
+					example: [
+						{
+						}
+					],
+					items: {
+					}
+				}
+			},
+			required: [
+				"files"
+			]
+		},
+		RemoveFilesBodyDto: {
+			type: "object",
+			properties: {
+				filePaths: {
+					type: "array",
+					description: "Пути файлов для удаления из поста",
+					example: [
+						"path/to/file.jpg"
+					],
+					items: {
+						type: "string"
+					}
+				}
+			},
+			required: [
+				"filePaths"
+			]
+		},
+		SinglePostParamsDto: {
+			name: "id",
+			type: "number",
+			description: "Идентификатор поста",
+			"in": "path",
+			example: 1,
+			required: true
+		},
+		PaginationQueryDto: {
+			type: "object",
+			"in": "query",
+			properties: {
+				count: {
+					type: "number",
+					description: "Количество элементов на странице",
+					example: 1
+				},
+				page: {
+					type: "number",
+					description: "Номер страницы",
+					example: 1
+				}
+			}
+		},
+		VoidResponseDto: {
+			type: "object",
+			properties: {
+				status: {
+					type: "string",
+					description: "Сообщение-статус",
+					example: "created"
+				}
+			},
+			required: [
+				"status"
+			]
+		},
+		HTTPError: {
+			type: "object",
+			properties: {
+				message: {
+					type: "string",
+					description: "Сообщение ошибки",
+					example: "Bad Request"
+				},
+				cause: {
+					type: "object",
+					description: "Причина ошибки(объект ошибки или массив таковых)",
+					example: {
+						error: "ssfkn"
+					}
+				},
+				statusCode: {
+					type: "number",
+					description: "Код ошибки",
+					example: 400
+				}
+			},
+			required: [
+				"message",
+				"statusCode"
+			]
+		}
+	}
+};
+var docs = {
+	openapi: openapi,
+	info: info,
+	servers: servers,
+	paths: paths,
+	components: components
+};
+
 config();
 const app = express();
 app.use(json(), cors(), cookieParser());
@@ -629,6 +1555,8 @@ mainRouter.use('/auth', authRouter);
 mainRouter.use('/posts', postsRouter);
 app.use('/api', mainRouter);
 app.use('/', static$1(STATIC_SERVE_ROOT));
+app.use('/docs', serve);
+app.get('/docs', setup(docs));
 app.use(createErrorHandler());
 app.listen(PORT, async () => {
     await databaseService.$connect();

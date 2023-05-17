@@ -1,5 +1,6 @@
+import { unlink } from 'node:fs/promises';
 import { BadRequestError, NotFoundError } from '@bricks-ether/server-utils';
-import { withoutStaticRoot } from '../shared/lib';
+import { withStaticRoot, withoutStaticRoot } from '../shared/lib';
 import { type PostsRepository, postsRepository } from './posts.repository';
 import { flatPost } from './lib';
 import type { PaginationQueryDto } from '../shared/types';
@@ -61,6 +62,7 @@ export class PostsService {
 
 	async addFiles(dto: AddFilesDto): Promise<PostDto> {
 		const { files, id, } = dto;
+		await this.getOne(dto.id);
 		const filePaths = files.map((file) => withoutStaticRoot(file.path));
 
 		const post = await this.postsRepository.addFiles({
@@ -72,13 +74,22 @@ export class PostsService {
 	}
 
 	async removeFiles(dto: RemoveFilesDto): Promise<PostDto> {
+		await this.getOne(dto.id);
 		const post = await this.postsRepository.removeFiles(dto);
+
+		const deletion = dto.filePaths.map((path) => unlink(withStaticRoot(path)));
+
+		await Promise.all(deletion);
 
 		return flatPost(post);
 	}
 
 	async remove(id: number): Promise<void> {
+		const post = await this.getOne(id);
 		await this.postsRepository.remove(id);
+		const deletion = post.files.map((path) => unlink(withStaticRoot(path)));
+
+		await Promise.all(deletion);
 	}
 }
 

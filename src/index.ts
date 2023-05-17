@@ -1,8 +1,10 @@
 import { createErrorHandler } from '@bricks-ether/server-utils';
 import express, { Router, json, static as serveStatic } from 'express';
+import { serve, setup } from 'swagger-ui-express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
+import docs from '../openapi.docs.json';
 import { databaseService } from './database';
 import { authRouter } from './auth';
 import { PORT, STATIC_SERVE_ROOT } from './shared/config';
@@ -25,6 +27,8 @@ mainRouter.use('/posts', postsRouter);
 
 app.use('/api', mainRouter);
 app.use('/', serveStatic(STATIC_SERVE_ROOT));
+app.use('/docs', serve);
+app.get('/docs', setup(docs));
 
 app.use(createErrorHandler());
 
@@ -33,7 +37,7 @@ app.listen(PORT, async () => {
 	console.log(`Server start on ${PORT} port`);
 });
 
-const onExit = (_, code: number) => {
+const onExit = (_: unknown, code: number) => {
 	databaseService.$disconnect();
 	process.exit(code);
 };
