@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { createErrorHandler } from '@bricks-ether/server-utils';
 import express, { Router, json, static as serveStatic } from 'express';
 import { serve, setup } from 'swagger-ui-express';
@@ -8,7 +9,8 @@ import docs from '../openapi.docs.json';
 import { databaseService } from './database';
 import { authRouter } from './auth';
 import { PORT, STATIC_SERVE_ROOT } from './shared/config';
-import { postsRouter } from './posts';
+import { postsRouter, POSTS_FILES_ROOT } from './posts';
+import { fillDB } from './fillDB';
 
 config();
 
@@ -33,7 +35,9 @@ app.get('/docs', setup(docs));
 app.use(createErrorHandler());
 
 app.listen(PORT, async () => {
+	await mkdir(POSTS_FILES_ROOT, { recursive: true, });
 	await databaseService.$connect();
+	await fillDB();
 	console.log(`Server start on ${PORT} port`);
 });
 
