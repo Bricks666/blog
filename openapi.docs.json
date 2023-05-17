@@ -5,7 +5,10 @@
 		"description": "Документация для тестового задания от компании WelbeX",
 		"version": "1.0.0"
 	},
-	"servers": [{ "url": "http://localhost:5000" }],
+	"servers": [
+		{ "url": "http://localhost:5000" },
+		{ "url": "https://welbex-blog-trvy.onrender.com/" }
+	],
 	"paths": {
 		"/api/auth": {
 			"get": {
@@ -25,7 +28,7 @@
 							}
 						}
 					},
-          "403": {
+					"403": {
 						"description": "Отсутствует токен обновления",
 						"content": {
 							"application/json": {
