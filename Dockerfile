@@ -30,4 +30,6 @@ COPY --from=build /app/dist ./
 
 ENV PORT=5000
 
+EXPOSE ${PORT}
+
 CMD ["npm", "run", "start:prod"]

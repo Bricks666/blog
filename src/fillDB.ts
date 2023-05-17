@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { databaseService } from './database';
-import { CreateUserDto, UserDto } from './users';
+import { CreateUserDto, UserDto, usersService } from './users';
 import { STATIC_SERVE_ROOT } from './shared/config';
 import { withoutStaticRoot } from './shared/lib';
 
@@ -29,13 +29,8 @@ const createUsers = async () => {
 		return users;
 	}
 
-	return Promise.all(
-		mockUsers.map((user) =>
-			databaseService.user.create({
-				data: user,
-			})
-		)
-	);
+	// For password hashing
+	return Promise.all(mockUsers.map((user) => usersService.create(user)));
 };
 
 const POSTS_COUNT = 5;
